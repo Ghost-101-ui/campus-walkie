@@ -1,0 +1,37 @@
+{
+  "name": "campus-walkie",
+  "version": "1.0.0",
+  "private": false,
+  "license": "MIT",
+  "description": "End-to-end encrypted push-to-talk walkie-talkie and chat for a small group. Static site, no accounts, nothing stored.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/size-check.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.mjs",
+    "format": "prettier --write \"**/*.{ts,css,html,json,md,mjs}\"",
+    "format:check": "prettier --check \"**/*.{ts,css,html,json,md,mjs}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@typescript-eslint/eslint-plugin": "^7.16.0",
+    "@typescript-eslint/parser": "^7.16.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "eslint": "^8.57.0",
+    "jsdom": "^24.1.0",
+    "jsqr": "^1.4.0",
+    "prettier": "^3.3.3",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

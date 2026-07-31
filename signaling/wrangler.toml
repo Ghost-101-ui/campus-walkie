@@ -1,0 +1,22 @@
+name = "campus-walkie-relay"
+main = "src/index.ts"
+compatibility_date = "2024-07-01"
+workers_dev = true
+
+# Comma-separated origin allowlist, e.g. "https://you.github.io".
+# "*" allows every origin so a fork works with no config. The relay is blind
+# either way; this only limits who can use your bandwidth.
+[vars]
+ALLOWED_ORIGINS = "*"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+# Room holds no storage, so the migration is only about registering the class.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+[observability]
+enabled = false   # no request logs: the relay should not even be able to leak metadata

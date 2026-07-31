@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+signaling/node_modules/
+
+# Build output
+dist/
+signaling/dist/
+
+# Environment — NEVER commit secrets
+.env.local
+.env.*.local
+
+# Wrangler state
+.wrangler/
+signaling/.wrangler/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+.stats/
