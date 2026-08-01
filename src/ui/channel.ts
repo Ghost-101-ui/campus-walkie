@@ -7,7 +7,7 @@
  * RIGHT: Minimal Info Cards (Channel, Encryption, Connection, Relay, Quality, Peer Count, Your ID).
  */
 
-import { $, clear, h, on } from './dom';
+import { $, clear, h, icon, on } from './dom';
 import { attachMeter, setTransmitting } from '../audio/ptt';
 import { retryPlayback } from '../audio/playback';
 import { micIconSvg } from './doodles';
@@ -50,11 +50,11 @@ export function renderChannelScreen(
 
   const signalBars = renderSignalBars();
 
-  const qrBtn = h('button', { class: 'icon-btn-brutal', title: 'Invite Friends / QR Code' }, controlIcon('/icons/add.gif', 'Invite friends / QR code'));
-  const verifyBtn = h('button', { class: 'icon-btn-brutal', title: 'Verify Safety Words' }, controlIcon('/icons/verify.gif', 'Verify safety words'));
-  const settingsBtn = h('button', { class: 'icon-btn-brutal', title: 'Settings' }, controlIcon('/icons/settings.gif', 'Settings'));
-  const leaveBtn = h('button', { class: 'icon-btn-brutal', title: 'Leave Channel' }, controlIcon('/icons/door.gif', 'Leave channel'));
-  const panicBtn = h('button', { class: 'icon-btn-brutal text-danger', title: 'PANIC - Wipe state immediately' }, controlIcon('/icons/panic.gif', 'Panic: wipe local session'));
+  const qrBtn = h('button', { class: 'icon-btn-brutal', title: 'Invite Friends / QR Code' }, controlIcon(icon('add.gif'), 'Invite friends / QR code'));
+  const verifyBtn = h('button', { class: 'icon-btn-brutal', title: 'Verify Safety Words' }, controlIcon(icon('verify.gif'), 'Verify safety words'));
+  const settingsBtn = h('button', { class: 'icon-btn-brutal', title: 'Settings' }, controlIcon(icon('settings.gif'), 'Settings'));
+  const leaveBtn = h('button', { class: 'icon-btn-brutal', title: 'Leave Channel' }, controlIcon(icon('door.gif'), 'Leave channel'));
+  const panicBtn = h('button', { class: 'icon-btn-brutal text-danger', title: 'PANIC - Wipe state immediately' }, controlIcon(icon('panic.gif'), 'Panic: wipe local session'));
 
   on(qrBtn, 'click', () => showQrModal());
   on(verifyBtn, 'click', () => showVerifyModal());
@@ -141,13 +141,13 @@ export function renderChannelScreen(
   const pttTab = h('button', {
     class: `ch-mobile-tab ${activeTab === 'ptt' ? 'active' : ''}`,
     title: 'Voice chat',
-  }, controlIcon('/icons/voice-chat.png', ''), h('span', {}, 'PTT'));
+  }, controlIcon(icon('voice-chat.png'), ''), h('span', {}, 'PTT'));
 
   const chatTab = h('button', {
     class: `ch-mobile-tab ${activeTab === 'chat' ? 'active' : ''}`,
     title: 'Text chat',
   },
-    controlIcon('/icons/chat.png', ''),
+    controlIcon(icon('chat.png'), ''),
     h('span', {}, 'CHAT'),
     state.unread > 0 ? h('span', { class: 'unread-badge' }, String(state.unread)) : null
   );

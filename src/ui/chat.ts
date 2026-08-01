@@ -5,7 +5,7 @@
  * Highlights own messages with a blue left border (`border-l-4 border-[#2962FF]`). No speech bubbles!
  */
 
-import { clear, h, hhmm, on } from './dom';
+import { clear, h, hhmm, icon, on } from './dom';
 import type { Message } from '../types';
 
 export interface ChatHandlers {
@@ -43,7 +43,7 @@ export function renderChatArea(
     type: 'button',
     class: 'composer-btn-brutal',
     title: 'Attach File',
-  }, h('img', { class: 'control-icon', src: '/icons/addfile.gif', alt: 'Attach file' }));
+  }, h('img', { class: 'control-icon', src: icon('addfile.gif'), alt: 'Attach file' }));
 
   const sendBtn = h('button', {
     type: 'button',

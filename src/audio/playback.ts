@@ -8,6 +8,7 @@
  * playing nothing.
  */
 
+import { resumeAudio } from './tones';
 import { debugLog, notify, state } from '../state';
 
 const elements = new Map<string, HTMLAudioElement>();
@@ -19,6 +20,8 @@ function createElement(peerId: string): HTMLAudioElement {
   const el = document.createElement('audio');
   el.autoplay = true;
   el.controls = false;
+  el.volume = 1.0;
+  el.muted = false;
   // Attribute, not property: `playsInline` is not typed everywhere.
   el.setAttribute('playsinline', '');
   el.dataset['peer'] = peerId;
@@ -32,6 +35,8 @@ function createElement(peerId: string): HTMLAudioElement {
 export function attachPeerAudio(peerId: string, stream: MediaStream): void {
   const el = elements.get(peerId) ?? createElement(peerId);
   el.srcObject = stream;
+  el.volume = 1.0;
+  el.muted = false;
   void tryPlay(el);
 }
 
@@ -46,6 +51,8 @@ export function detachPeerAudio(peerId: string): void {
 
 async function tryPlay(el: HTMLAudioElement): Promise<void> {
   try {
+    el.volume = 1.0;
+    el.muted = false;
     await el.play();
     if (state.needsSoundTap) {
       state.needsSoundTap = false;
@@ -65,6 +72,17 @@ async function tryPlay(el: HTMLAudioElement): Promise<void> {
  */
 export function unlockPlayback(): void {
   unlocked = true;
+  void resumeAudio();
+
+  // Create and play a silent audio snippet to unlock browser media element policies
+  try {
+    const dummy = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+    dummy.volume = 0.01;
+    void dummy.play().catch(() => {/* ignore */});
+  } catch {
+    /* ignore */
+  }
+
   for (const el of elements.values()) void tryPlay(el);
 }
 

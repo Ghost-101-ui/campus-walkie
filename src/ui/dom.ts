@@ -68,3 +68,6 @@ export function on<T extends EventTarget, E extends Event = Event>(
 export function hhmm(ts: number): string {
   return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
+
+/** Resolves an icon URL handling base paths for Vite */
+export const icon = (name: string) => `${import.meta.env.BASE_URL}icons/${name}`;
