@@ -1191,15 +1191,29 @@ input:-webkit-autofill:focus {
     display: none;
     order: 2;
     flex: 1 1 0%;
+    height: auto;
     min-height: 0;
+    overflow: hidden;
   }
 
   .ch-layout-grid.mobile-active-peers .ch-col-peers {
     display: flex;
+    flex-direction: column;
+  }
+
+  .peers-header-bar,
+  .peers-footer-action {
+    flex-shrink: 0;
+  }
+
+  .peers-scroll-list {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .ch-col-center {
-    flex: 1;
+    flex: 1 1 0%;
     display: flex;
     flex-direction: column;
     order: 1;
@@ -1215,11 +1229,21 @@ input:-webkit-autofill:focus {
     flex: 0 0 auto;
   }
 
+  .chat-section-container {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .chat-timeline {
+    flex: 1 1 0%;
+    min-height: 0;
     padding: var(--sp3);
+    overflow-y: auto;
   }
 
   .composer-brutal {
+    flex-shrink: 0;
     padding: 10px var(--sp3);
     padding-bottom: max(10px, var(--safe-b));
   }
