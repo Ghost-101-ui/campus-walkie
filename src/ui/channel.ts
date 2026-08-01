@@ -469,8 +469,9 @@ function renderPttHeroSection(): HTMLElement {
     canvas,
     pttHeroBtn,
     subHint,
-    renderVoiceFilterBar(),
-    renderVolumeBar(),
+    // TODO: Voice FX temporarily hidden — uncomment to re-enable
+    // renderVoiceFilterBar(),
+    // renderVolumeBar(),
     createDoodleArea('ptt-bottom')
   );
 }
@@ -488,6 +489,7 @@ const FILTER_DEFS: FilterDef[] = [
   { id: 'demon',     emoji: '👿', label: 'DEMON',  color: '#6A1B9A' },
 ];
 
+// @ts-ignore — temporarily hidden; remove comment when re-enabling
 function renderVoiceFilterBar(): HTMLElement {
   const buttons = FILTER_DEFS.map((def) => {
     const isActive = state.voiceFilter === def.id;
@@ -529,6 +531,7 @@ function renderVoiceFilterBar(): HTMLElement {
 
 /* ------------------------------------------------------------ Volume Bar */
 
+// @ts-ignore — temporarily hidden; remove comment when re-enabling
 function renderVolumeBar(): HTMLElement {
   const vol = state.outputVolume;
 
