@@ -11,11 +11,152 @@
 
 🌐 **Live Demo:** [https://ghost-101-ui.github.io/campus-walkie/](https://ghost-101-ui.github.io/campus-walkie/)
 
-**Campus Walkie** is a high-performance, browser-based Push-To-Talk (PTT) walkie-talkie and secure chat application. Designed with a Neo-Brutalist + Engineering Notebook aesthetic, it enables instant, encrypted, low-latency communication over P2P WebRTC mesh networks without central database persistence.
+**Campus Walkie** is a high-performance, browser-based Push-To-Talk (PTT) walkie-talkie and secure chat application. Built with a Neo-Brutalist + Engineering Notebook aesthetic, it enables instant, encrypted, low-latency communication over peer-to-peer (P2P) WebRTC mesh networks without central database persistence or backend message logging.
 
 ---
 
-## ✨ Features
+## 📐 System Architecture Overview
+
+Campus Walkie uses a **hybrid P2P mesh network architecture**:
+- **Signaling Server (Cloudflare Worker)**: Serves solely as a blind matchmaking relay to exchange WebRTC SDP offers/answers and ICE candidates. No room keys, audio, or message data ever touch the server.
+- **Direct WebRTC Mesh**: Once peers discover each other, voice streams (MediaStreams) and text/files (DataChannels) travel **directly device-to-device**.
+
+```mermaid
+flowchart TB
+    subgraph ClientA ["📱 Client A (User 1)"]
+        UI_A["Neo-Brutalist UI"]
+        Audio_A["WebAudio & Mic"]
+        KDF_A["Web Worker KDF"]
+        Crypto_A["AES-256-GCM / ECDSA"]
+        WebRTC_A["RTCPeerConnection"]
+    end
+
+    subgraph Server ["⚡ Cloudflare Worker (Signaling Relay)"]
+        WebSocketRelay["WebSocket Blind Matchmaker"]
+    end
+
+    subgraph ClientB ["📱 Client B (User 2)"]
+        UI_B["Neo-Brutalist UI"]
+        Audio_B["WebAudio & Speaker"]
+        KDF_B["Web Worker KDF"]
+        Crypto_B["AES-256-GCM / ECDSA"]
+        WebRTC_B["RTCPeerConnection"]
+    end
+
+    %% Signaling phase
+    UI_A -->|"1. Enter Channel & Key"| KDF_A
+    UI_B -->|"1. Enter Channel & Key"| KDF_B
+    WebRTC_A <-->|"2. Exchange SDP / ICE (WebSocket)"| WebSocketRelay
+    WebSocketRelay <-->|"2. Exchange SDP / ICE (WebSocket)"| WebRTC_B
+
+    %% Direct P2P phase
+    WebRTC_A <===="3. Encrypted P2P Voice Stream (WebRTC MediaStream)"====> WebRTC_B
+    WebRTC_A <===="4. Encrypted Text & File Transfer (RTCDataChannel)"====> WebRTC_B
+```
+
+---
+
+## 🔐 Cryptography & Key Derivation Flow
+
+Security in Campus Walkie is strictly **Zero-Knowledge** and **Client-Side Only**.
+
+### 1. Key Derivation (PBKDF2-SHA256)
+When a user enters a `#channel-name` and `Passphrase`:
+1. A background Web Worker runs **PBKDF2-SHA256** with **100,000 iterations**.
+2. A deterministic salt is computed from the channel name: `SHA-256("campus-walkie-salt:" + channelName)`.
+3. The worker derives two distinct 256-bit cryptographic keys:
+   - **`ChannelKey`**: AES-256-GCM master key used to encrypt/decrypt voice payloads and chat data.
+   - **`ChannelId`**: Hashed room identifier sent to the signaling server so peers can find the same room without exposing the room's real name or passphrase.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User (Browser)
+    participant UI as UI Component
+    participant Worker as KDF Web Worker
+    participant Crypto as Web Crypto API
+    participant Sig as Signaling Server
+
+    User->>UI: Enter Channel Name & Secret Passphrase
+    UI->>Worker: Pass (channelName, passphrase)
+    Note over Worker: Compute Salt = SHA256("salt:" + channelName)
+    Worker->>Crypto: Derive Bits (PBKDF2-SHA256, 100k iterations)
+    Crypto-->>Worker: Derived 512 bits
+    Note over Worker: Split into ChannelKey (256-bit) & ChannelId (256-bit)
+    Worker-->>UI: Return (ChannelKey, ChannelId)
+    UI->>Sig: Connect WebSocket to Room (ChannelId)
+    Note over Sig: Room ID is hashed; server cannot guess Passphrase or Channel Name
+```
+
+---
+
+## 🎙️ Voice & Text Message Encryption Lifecycle
+
+Every text message, audio frame, and file payload is encrypted using **AES-256-GCM** and signed with an ephemeral **ECDSA P-256** session signature.
+
+```mermaid
+flowchart LR
+    subgraph Sender ["Sender Device"]
+        RawData["Raw Audio / Text / File"]
+        IVGen["Generate Random 96-bit IV"]
+        AESEncrypt["AES-256-GCM Encrypt"]
+        ECDSASign["Sign with ECDSA Private Key"]
+        Packet["Construct Envelope: [IV + Ciphertext + Auth Tag + Signature]"]
+    end
+
+    subgraph Receiver ["Receiver Device"]
+        ReceivePacket["Receive Envelope"]
+        ECDSAVerify["Verify ECDSA Signature"]
+        AESDecrypt["AES-256-GCM Decrypt"]
+        Output["Play Audio / Render Text"]
+    end
+
+    RawData --> AESEncrypt
+    IVGen --> AESEncrypt
+    AESEncrypt --> ECDSASign
+    ECDSASign --> Packet
+    Packet ==>|"Direct P2P DataChannel"| ReceivePacket
+    ReceivePacket --> ECDSAVerify
+    ECDSAVerify --> AESDecrypt
+    AESDecrypt --> Output
+```
+
+---
+
+## 🔄 Peer Discovery & WebRTC Connection Lifecycle
+
+How two devices discover each other and form a direct P2P mesh:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor ClientA as Phone A
+    participant Relay as Cloudflare Worker Relay
+    actor ClientB as Phone B
+
+    ClientA->>Relay: WS Connect /join?room=ChannelId
+    ClientB->>Relay: WS Connect /join?room=ChannelId
+    Relay-->>ClientA: Welcome (Peers list: [Phone B])
+    Relay-->>ClientB: Peer Joined (Phone A)
+
+    Note over ClientA,ClientB: WebRTC Handshake Initiation
+    ClientA->>Relay: Send SDP Offer (Encrypted payload)
+    Relay->>ClientB: Forward SDP Offer
+    ClientB->>Relay: Send SDP Answer
+    Relay->>ClientA: Forward SDP Answer
+
+    ClientA->>Relay: Send ICE Candidates
+    Relay->>ClientB: Forward ICE Candidates
+    ClientB->>Relay: Send ICE Candidates
+    Relay->>ClientA: Forward ICE Candidates
+
+    Note over ClientA,ClientB: Direct WebRTC Connection Established (Relay disconnected from audio)
+    ClientA<===>ClientB: P2P Encrypted Audio Stream & DataChannel
+```
+
+---
+
+## ✨ Features Breakdown
 
 - 🎙️ **Physical Push-To-Talk (PTT)**: Low-latency voice streaming over WebAudio & WebRTC with real-time canvas waveform visualizer, half-duplex locks, and active talker indicator.
 - 🔒 **End-to-End Encryption (E2EE)**: Zero-knowledge architecture using Web Crypto API, PBKDF2-SHA256 key derivation (100,000 iterations), and AES-256-GCM ciphers. Private keys never touch any server.
@@ -114,27 +255,6 @@ campus-walkie/
 │   └── index.css          # Core Brutalist Design System & Media Queries
 └── index.html             # Main HTML Template
 ```
-
----
-
-## 🔐 Security Architecture
-
-1. **Zero-Knowledge Keys**: Passphrases and room names are processed locally using PBKDF2-SHA256 inside a background Web Worker.
-2. **Ephemeral Identity**: Every session generates a non-extractable CryptoKey pair (`ECDSA` / `P-256`) stored only in volatile memory.
-3. **URL Hash Protection**: Encryption keys in URLs are stored in the location hash (`#key=...`), ensuring they are **never sent over HTTP headers** to any web server or proxy logs.
-4. **Panic Evacuation**: Clicking Panic immediately clears `sessionStorage`, resets state maps, closes WebSockets, and destroys active MediaStreams.
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Ghost-101-ui/campus-walkie/issues).
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ---
 
