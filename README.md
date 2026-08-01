@@ -23,7 +23,7 @@ Campus Walkie uses a **hybrid P2P mesh network architecture**:
 
 ```mermaid
 flowchart TB
-    subgraph ClientA ["📱 Client A (User 1)"]
+    subgraph ClientA ["Client A (User 1)"]
         UI_A["Neo-Brutalist UI"]
         Audio_A["WebAudio & Mic"]
         KDF_A["Web Worker KDF"]
@@ -31,11 +31,11 @@ flowchart TB
         WebRTC_A["RTCPeerConnection"]
     end
 
-    subgraph Server ["⚡ Cloudflare Worker (Signaling Relay)"]
+    subgraph Server ["Cloudflare Worker (Signaling Relay)"]
         WebSocketRelay["WebSocket Blind Matchmaker"]
     end
 
-    subgraph ClientB ["📱 Client B (User 2)"]
+    subgraph ClientB ["Client B (User 2)"]
         UI_B["Neo-Brutalist UI"]
         Audio_B["WebAudio & Speaker"]
         KDF_B["Web Worker KDF"]
@@ -43,15 +43,12 @@ flowchart TB
         WebRTC_B["RTCPeerConnection"]
     end
 
-    %% Signaling phase
-    UI_A -->|"1. Enter Channel & Key"| KDF_A
-    UI_B -->|"1. Enter Channel & Key"| KDF_B
-    WebRTC_A <-->|"2. Exchange SDP / ICE (WebSocket)"| WebSocketRelay
-    WebSocketRelay <-->|"2. Exchange SDP / ICE (WebSocket)"| WebRTC_B
-
-    %% Direct P2P phase
-    WebRTC_A <===="3. Encrypted P2P Voice Stream (WebRTC MediaStream)"====> WebRTC_B
-    WebRTC_A <===="4. Encrypted Text & File Transfer (RTCDataChannel)"====> WebRTC_B
+    UI_A --> KDF_A
+    UI_B --> KDF_B
+    WebRTC_A <-->|"2. Exchange SDP & ICE via WebSocket"| WebSocketRelay
+    WebSocketRelay <-->|"2. Exchange SDP & ICE via WebSocket"| WebRTC_B
+    WebRTC_A <==>|"3. Direct P2P Encrypted Audio Stream"| WebRTC_B
+    WebRTC_A <==>|"4. Direct P2P Encrypted DataChannel"| WebRTC_B
 ```
 
 ---
@@ -60,7 +57,7 @@ flowchart TB
 
 Security in Campus Walkie is strictly **Zero-Knowledge** and **Client-Side Only**.
 
-### 1. Key Derivation (PBKDF2-SHA256)
+### Key Derivation (PBKDF2-SHA256)
 When a user enters a `#channel-name` and `Passphrase`:
 1. A background Web Worker runs **PBKDF2-SHA256** with **100,000 iterations**.
 2. A deterministic salt is computed from the channel name: `SHA-256("campus-walkie-salt:" + channelName)`.
@@ -78,14 +75,14 @@ sequenceDiagram
     participant Sig as Signaling Server
 
     User->>UI: Enter Channel Name & Secret Passphrase
-    UI->>Worker: Pass (channelName, passphrase)
-    Note over Worker: Compute Salt = SHA256("salt:" + channelName)
+    UI->>Worker: Pass channelName and passphrase
+    Note over Worker: Compute Salt = SHA256(salt + channelName)
     Worker->>Crypto: Derive Bits (PBKDF2-SHA256, 100k iterations)
     Crypto-->>Worker: Derived 512 bits
-    Note over Worker: Split into ChannelKey (256-bit) & ChannelId (256-bit)
-    Worker-->>UI: Return (ChannelKey, ChannelId)
-    UI->>Sig: Connect WebSocket to Room (ChannelId)
-    Note over Sig: Room ID is hashed; server cannot guess Passphrase or Channel Name
+    Note over Worker: Split into ChannelKey & ChannelId
+    Worker-->>UI: Return ChannelKey and ChannelId
+    UI->>Sig: Connect WebSocket to Room ChannelId
+    Note over Sig: Room ID is hashed (Server cannot guess Passphrase)
 ```
 
 ---
@@ -101,7 +98,7 @@ flowchart LR
         IVGen["Generate Random 96-bit IV"]
         AESEncrypt["AES-256-GCM Encrypt"]
         ECDSASign["Sign with ECDSA Private Key"]
-        Packet["Construct Envelope: [IV + Ciphertext + Auth Tag + Signature]"]
+        Packet["Construct Envelope: IV + Ciphertext + AuthTag + Signature"]
     end
 
     subgraph Receiver ["Receiver Device"]
@@ -115,7 +112,7 @@ flowchart LR
     IVGen --> AESEncrypt
     AESEncrypt --> ECDSASign
     ECDSASign --> Packet
-    Packet ==>|"Direct P2P DataChannel"| ReceivePacket
+    Packet -->|"Direct P2P DataChannel"| ReceivePacket
     ReceivePacket --> ECDSAVerify
     ECDSAVerify --> AESDecrypt
     AESDecrypt --> Output
@@ -136,7 +133,7 @@ sequenceDiagram
 
     ClientA->>Relay: WS Connect /join?room=ChannelId
     ClientB->>Relay: WS Connect /join?room=ChannelId
-    Relay-->>ClientA: Welcome (Peers list: [Phone B])
+    Relay-->>ClientA: Welcome (Peers list: Phone B)
     Relay-->>ClientB: Peer Joined (Phone A)
 
     Note over ClientA,ClientB: WebRTC Handshake Initiation
@@ -150,8 +147,9 @@ sequenceDiagram
     ClientB->>Relay: Send ICE Candidates
     Relay->>ClientA: Forward ICE Candidates
 
-    Note over ClientA,ClientB: Direct WebRTC Connection Established (Relay disconnected from audio)
-    ClientA<===>ClientB: P2P Encrypted Audio Stream & DataChannel
+    Note over ClientA,ClientB: Direct WebRTC Connection Established
+    ClientA->>ClientB: P2P Encrypted Audio Stream & DataChannel
+    ClientB->>ClientA: P2P Encrypted Audio Stream & DataChannel
 ```
 
 ---
