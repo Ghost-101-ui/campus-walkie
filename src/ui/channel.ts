@@ -256,12 +256,33 @@ export function renderChannelScreen(
       if (pttHeroSection) {
         const pulseRing = pttHeroSection.querySelector('.pulse-ring');
         const heroBtn = pttHeroSection.querySelector('.ptt-hero-btn');
+        const pttLabel = heroBtn?.querySelector('.ptt-label-hero');
+        const subHint = pttHeroSection.querySelector('.ptt-sub-hint');
+        const isSomeoneTalking = state.talker !== '' && !state.transmitting;
+        const talkerPeer = state.talker ? state.peers.get(state.talker) : null;
+        const talkerName = talkerPeer ? talkerPeer.name : 'Someone';
+
         if (state.transmitting) {
           pulseRing?.classList.add('active');
           heroBtn?.classList.add('transmitting');
+          if (state.pttLatched) {
+            heroBtn?.classList.add('latched');
+            if (pttLabel) pttLabel.textContent = '🔒 HANDS-FREE ON (CLICK TO STOP)';
+            if (subHint) subHint.textContent = '🔒 Hands-Free Locked — Click or Double-Click to turn off';
+          } else {
+            heroBtn?.classList.remove('latched');
+            if (pttLabel) pttLabel.textContent = 'TRANSMITTING';
+            if (subHint) subHint.textContent = '⚡ Release to stop • Double-click to lock hands-free';
+          }
         } else {
           pulseRing?.classList.remove('active');
-          heroBtn?.classList.remove('transmitting');
+          heroBtn?.classList.remove('transmitting', 'latched');
+          if (pttLabel) {
+            pttLabel.textContent = isSomeoneTalking ? `${talkerName.toUpperCase()} SPEAKING` : 'HOLD TO TALK';
+          }
+          if (subHint) {
+            subHint.textContent = '💡 Hold to talk • Double-click for hands-free mode';
+          }
         }
       }
     }
@@ -322,11 +343,13 @@ function renderPeerCard(peer: Peer, isLocal = false): HTMLElement {
     h('div', { class: 'peer-details' },
       h('div', { class: 'peer-name-txt' }, peer.name || 'Anonymous'),
       h('div', { class: `peer-status-sub ${isTalking ? 'talking' : ''}` },
-        isTalking ? '● Talking' : (isLocal ? 'Idle' : 'Listening')
+        isTalking ? (state.pttLatched && isLocal ? '🔒 Hands-Free' : '● Talking') : (isLocal ? 'Idle' : 'Listening')
       )
     )
   );
 }
+
+let lastPointerDownTime = 0;
 
 function renderPttHeroSection(): HTMLElement {
   const canvas = h('canvas', { id: 'ptt-meter-canvas', class: 'ptt-canvas-meter' }) as HTMLCanvasElement;
@@ -338,13 +361,30 @@ function renderPttHeroSection(): HTMLElement {
   const micIconSvgEl = h('div', {});
   micIconSvgEl.innerHTML = micIconSvg(24, 24, state.transmitting ? '#FFFFFF' : '#121212');
 
+  const getLabelText = () => {
+    if (state.transmitting) {
+      return state.pttLatched ? '🔒 HANDS-FREE ON (CLICK TO STOP)' : 'TRANSMITTING';
+    }
+    return isSomeoneTalking ? `${talkerName.toUpperCase()} SPEAKING` : 'HOLD TO TALK';
+  };
+
+  const getSubHintText = () => {
+    if (state.transmitting && state.pttLatched) {
+      return '🔒 Hands-Free Locked — Click or Double-Click to turn off';
+    }
+    if (state.transmitting) {
+      return '⚡ Release to stop • Double-click to lock hands-free';
+    }
+    return '💡 Hold to talk • Double-click for hands-free mode';
+  };
+
   const pttHeroBtn = h('button', {
-    class: `ptt-hero-btn ${state.transmitting ? 'transmitting' : ''}`,
+    class: `ptt-hero-btn ${state.transmitting ? 'transmitting' : ''} ${state.pttLatched ? 'latched' : ''}`,
     type: 'button',
     id: 'ptt-hero-button',
   },
     h('div', { class: 'ptt-icon-wrap' }, micIconSvgEl),
-    h('span', { class: 'ptt-label-hero' }, state.transmitting ? 'TRANSMITTING' : (isSomeoneTalking ? `${talkerName.toUpperCase()} SPEAKING` : 'HOLD TO TALK')),
+    h('span', { class: 'ptt-label-hero' }, getLabelText()),
     state.transmitting ? h('div', { class: 'ptt-wave-anim' },
       h('div', { class: 'wave-bar' }),
       h('div', { class: 'wave-bar' }),
@@ -353,30 +393,80 @@ function renderPttHeroSection(): HTMLElement {
     ) : null
   );
 
-  // Pointer / Touch events for PTT hold
-  const startTransmitting = (ev: Event) => {
+  const subHint = h('div', { class: 'ptt-sub-hint' }, getSubHintText());
+
+  // Pointer / Touch events for PTT hold and double-click latching
+  const handlePointerDown = (ev: PointerEvent) => {
     ev.preventDefault();
-    if (isSomeoneTalking && state.halfDuplex) return;
+    if (isSomeoneTalking && state.halfDuplex && !state.transmitting) return;
+
+    // Pointer capture prevents "stuck PTT" when cursor or finger moves outside
+    try {
+      (ev.currentTarget as HTMLElement)?.setPointerCapture(ev.pointerId);
+    } catch {
+      // ignore
+    }
+
+    const now = Date.now();
+    const delta = now - lastPointerDownTime;
+
+    if (delta > 0 && delta < 350) {
+      // Double Click / Double Tap detected!
+      lastPointerDownTime = 0;
+      state.pttLatched = !state.pttLatched;
+      setTransmitting(state.pttLatched);
+      return;
+    }
+
+    lastPointerDownTime = now;
+
+    if (state.pttLatched) {
+      // Single click while latched -> turn OFF hands-free mode
+      state.pttLatched = false;
+      setTransmitting(false);
+      return;
+    }
+
+    // Normal Hold-to-Talk start
     setTransmitting(true);
   };
 
-  const stopTransmitting = (ev: Event) => {
+  const handlePointerUp = (ev: PointerEvent) => {
     ev.preventDefault();
+    try {
+      if ((ev.currentTarget as HTMLElement)?.hasPointerCapture(ev.pointerId)) {
+        (ev.currentTarget as HTMLElement)?.releasePointerCapture(ev.pointerId);
+      }
+    } catch {
+      // ignore
+    }
+
+    // In latched hands-free mode, do NOT stop transmitting on pointer release
+    if (state.pttLatched) return;
+
     setTransmitting(false);
   };
 
-  on(pttHeroBtn, 'pointerdown', startTransmitting);
-  on(pttHeroBtn, 'pointerup', stopTransmitting);
-  on(pttHeroBtn, 'pointercancel', stopTransmitting);
+  on(pttHeroBtn, 'pointerdown', handlePointerDown as EventListener);
+  on(pttHeroBtn, 'pointerup', handlePointerUp as EventListener);
+  on(pttHeroBtn, 'pointercancel', handlePointerUp as EventListener);
   on(pttHeroBtn, 'contextmenu', (e) => e.preventDefault());
+
+  // Safety fallback: if browser loses focus, release non-latched transmission
+  window.addEventListener('blur', () => {
+    if (!state.pttLatched && state.transmitting) {
+      setTransmitting(false);
+    }
+  }, { once: true });
 
   return h('div', { class: 'ptt-hero-section' },
     state.transmitting ? h('div', { class: 'recording-timer-badge' },
-      h('span', {}, '🔴 RECORDING'),
-      h('span', {}, '00:07')
+      h('span', {}, state.pttLatched ? '🔒 HANDS-FREE' : '🔴 RECORDING'),
+      h('span', {}, 'LIVE')
     ) : null,
     canvas,
     pttHeroBtn,
+    subHint,
     createDoodleArea('ptt-bottom')
   );
 }

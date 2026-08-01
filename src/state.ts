@@ -28,6 +28,8 @@ export interface AppState {
   talker: string;
   /** True while our own PTT is held. */
   transmitting: boolean;
+  /** True when PTT is double-clicked into toggle/hands-free mode. */
+  pttLatched: boolean;
   micState: 'off' | 'open' | 'denied' | 'busy' | 'unavailable';
   /** Half-duplex lockout: block PTT while someone else transmits. */
   halfDuplex: boolean;
@@ -54,6 +56,7 @@ export const state: AppState = {
   messages: [],
   talker: '',
   transmitting: false,
+  pttLatched: false,
   micState: 'off',
   halfDuplex: true,
   needsSoundTap: false,

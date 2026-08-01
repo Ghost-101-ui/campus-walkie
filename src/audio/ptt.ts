@@ -84,6 +84,10 @@ export async function setTransmitting(tx: boolean): Promise<void> {
     await openMic();
   }
 
+  if (!tx) {
+    state.pttLatched = false;
+  }
+
   state.transmitting = tx;
 
   if (micTrack) {

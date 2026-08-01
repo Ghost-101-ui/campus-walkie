@@ -868,6 +868,28 @@ input:-webkit-autofill:focus {
   border-color: var(--recording);
 }
 
+.ptt-hero-btn.latched {
+  background: #FFF0F0;
+  border-color: #D32F2F;
+  box-shadow: 0 0 16px rgba(211, 47, 47, 0.35);
+  animation: latched-glow 2s infinite alternate;
+}
+
+@keyframes latched-glow {
+  0% { box-shadow: 0 0 10px rgba(211, 47, 47, 0.2); }
+  100% { box-shadow: 0 0 20px rgba(211, 47, 47, 0.5); }
+}
+
+.ptt-sub-hint {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  user-select: none;
+}
+
 .ptt-icon-wrap {
   width: 44px;
   height: 44px;
