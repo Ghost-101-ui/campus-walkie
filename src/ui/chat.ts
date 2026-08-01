@@ -18,9 +18,22 @@ export function renderChatArea(
   messages: Message[],
   handlers: ChatHandlers
 ): void {
+  let messagesList = container.querySelector('#chat-messages') as HTMLElement | null;
+
+  if (messagesList) {
+    clear(messagesList);
+    for (const m of messages) {
+      messagesList.append(renderTimelineMessage(m));
+    }
+    requestAnimationFrame(() => {
+      if (messagesList) messagesList.scrollTop = messagesList.scrollHeight;
+    });
+    return;
+  }
+
   clear(container);
 
-  const messagesList = h('div', { class: 'chat-timeline', id: 'chat-messages' });
+  messagesList = h('div', { class: 'chat-timeline', id: 'chat-messages' });
 
   for (const m of messages) {
     messagesList.append(renderTimelineMessage(m));

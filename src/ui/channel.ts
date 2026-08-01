@@ -24,7 +24,7 @@ export interface ChannelCallbacks {
   onSendFile(file: File): void;
 }
 
-let activeTab: 'ptt' | 'chat' = 'ptt';
+let activeTab: 'ptt' | 'chat' | 'peers' = 'ptt';
 
 function controlIcon(src: string, alt: string): HTMLImageElement {
   return h('img', { class: 'control-icon', src, alt }) as HTMLImageElement;
@@ -34,6 +34,12 @@ export function renderChannelScreen(
   container: HTMLElement,
   callbacks: ChannelCallbacks
 ): void {
+  const existingChatWrapper = container.querySelector('.chat-section-container') as HTMLElement | null;
+  const existingPttHero = container.querySelector('.ptt-hero-section') as HTMLElement | null;
+
+  if (existingChatWrapper) existingChatWrapper.remove();
+  if (existingPttHero) existingPttHero.remove();
+
   clear(container);
 
   /* --------------------------------------------------------------- Header */
@@ -152,6 +158,15 @@ export function renderChannelScreen(
     state.unread > 0 ? h('span', { class: 'unread-badge' }, String(state.unread)) : null
   );
 
+  const peersTab = h('button', {
+    class: `ch-mobile-tab ${activeTab === 'peers' ? 'active' : ''}`,
+    title: 'Peers list',
+  },
+    controlIcon(icon('group.png'), ''),
+    h('span', {}, 'PEERS'),
+    h('span', { class: 'peer-count-badge unread-badge' }, String(state.peers.size + 1))
+  );
+
   on(pttTab, 'click', () => {
     activeTab = 'ptt';
     state.unread = 0;
@@ -164,18 +179,34 @@ export function renderChannelScreen(
     renderChannelScreen(container, callbacks);
   });
 
-  const mobileTabs = h('div', { class: 'ch-mobile-tabs' }, pttTab, chatTab);
+  on(peersTab, 'click', () => {
+    activeTab = 'peers';
+    renderChannelScreen(container, callbacks);
+  });
+
+  const mobileTabs = h('div', { class: 'ch-mobile-tabs' }, pttTab, chatTab, peersTab);
 
   /* ------------------------------------------------------- Center Column (Chat & PTT) */
-  const chatAreaWrapper = h('div', { class: 'chat-section-container' });
+  const chatAreaWrapper = existingChatWrapper || h('div', { class: 'chat-section-container' });
   renderChatArea(chatAreaWrapper, state.messages, {
     onSendText: callbacks.onSendText,
     onSendFile: callbacks.onSendFile,
   });
 
-  const pttHeroSection = renderPttHeroSection();
+  const pttHeroSection = existingPttHero || renderPttHeroSection();
+  if (existingPttHero) {
+    const pulseRing = existingPttHero.querySelector('.pulse-ring');
+    const heroBtn = existingPttHero.querySelector('.ptt-hero-btn');
+    if (state.transmitting) {
+       pulseRing?.classList.add('active');
+       heroBtn?.classList.add('transmitting');
+    } else {
+       pulseRing?.classList.remove('active');
+       heroBtn?.classList.remove('transmitting');
+    }
+  }
 
-  const centerColumn = h('div', { class: `ch-col-center active-${activeTab}` },
+  const centerColumn = h('div', { class: `ch-col-center` },
     mobileTabs,
     chatAreaWrapper,
     pttHeroSection
@@ -223,7 +254,7 @@ export function renderChannelScreen(
   );
 
   /* ------------------------------------------------ Desktop 3-Column Grid Layout */
-  const gridLayout = h('div', { class: 'ch-layout-grid' },
+  const gridLayout = h('div', { class: `ch-layout-grid mobile-active-${activeTab}` },
     leftPeersColumn,
     centerColumn,
     rightInfoColumn
