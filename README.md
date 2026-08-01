@@ -21,35 +21,7 @@ Campus Walkie uses a **hybrid P2P mesh network architecture**:
 - **Signaling Server (Cloudflare Worker)**: Serves solely as a blind matchmaking relay to exchange WebRTC SDP offers/answers and ICE candidates. No room keys, audio, or message data ever touch the server.
 - **Direct WebRTC Mesh**: Once peers discover each other, voice streams (MediaStreams) and text/files (DataChannels) travel **directly device-to-device**.
 
-```mermaid
-flowchart TB
-    subgraph ClientA ["Client A (User 1)"]
-        UI_A["Neo-Brutalist UI"]
-        Audio_A["WebAudio & Mic"]
-        KDF_A["Web Worker KDF"]
-        Crypto_A["AES-256-GCM / ECDSA"]
-        WebRTC_A["RTCPeerConnection"]
-    end
-
-    subgraph Server ["Cloudflare Worker (Signaling Relay)"]
-        WebSocketRelay["WebSocket Blind Matchmaker"]
-    end
-
-    subgraph ClientB ["Client B (User 2)"]
-        UI_B["Neo-Brutalist UI"]
-        Audio_B["WebAudio & Speaker"]
-        KDF_B["Web Worker KDF"]
-        Crypto_B["AES-256-GCM / ECDSA"]
-        WebRTC_B["RTCPeerConnection"]
-    end
-
-    UI_A --> KDF_A
-    UI_B --> KDF_B
-    WebRTC_A <-->|"2. Exchange SDP & ICE via WebSocket"| WebSocketRelay
-    WebSocketRelay <-->|"2. Exchange SDP & ICE via WebSocket"| WebRTC_B
-    WebRTC_A <==>|"3. Direct P2P Encrypted Audio Stream"| WebRTC_B
-    WebRTC_A <==>|"4. Direct P2P Encrypted DataChannel"| WebRTC_B
-```
+![Campus Walkie System Architecture Flow](./public/flow.png)
 
 ---
 
