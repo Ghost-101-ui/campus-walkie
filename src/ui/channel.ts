@@ -384,33 +384,40 @@ function renderPttHeroSection(): HTMLElement {
 /* ------------------------------------------------------------------- Modals */
 
 function showQrModal(): void {
-  const url = new URL(window.location.href);
-  // Start with a clean URL so an old invite cannot leak stale parameters.
-  url.search = '';
-  url.hash = '';
-  url.searchParams.set('channel', state.channel);
+  const baseUrl = new URL(window.location.href);
+  baseUrl.search = '';
+  baseUrl.hash = '';
+  baseUrl.searchParams.set('channel', state.channel);
   const relay = localStorage.getItem('cw_relay') || import.meta.env.VITE_RELAY_URL || '';
-  if (relay) url.searchParams.set('relay', relay);
+  if (relay) baseUrl.searchParams.set('relay', relay);
+
+  const safeUrl = baseUrl.toString();
+
+  const qrUrl = new URL(safeUrl);
   const pass = sessionStorage.getItem('cw_passphrase') || '';
   if (pass) {
-    url.hash = `key=${encodeURIComponent(pass)}`;
+    qrUrl.hash = `key=${encodeURIComponent(pass)}`;
   }
 
   const canvas = h('canvas', { class: 'qr-canvas' }) as HTMLCanvasElement;
-  drawQr(canvas, url.toString(), '#121212', '#FFFFFF');
+  drawQr(canvas, qrUrl.toString(), '#121212', '#FFFFFF');
 
-  const copyBtn = h('button', { class: 'btn btn-primary w-full' }, 'COPY SHARE LINK');
+  const copyBtn = h('button', { class: 'btn btn-primary w-full' }, 'COPY SAFE LINK 🔒');
   on(copyBtn, 'click', () => {
-    navigator.clipboard.writeText(url.toString());
-    copyBtn.textContent = 'LINK COPIED! ✔';
-    setTimeout(() => { copyBtn.textContent = 'COPY SHARE LINK'; }, 2000);
+    navigator.clipboard.writeText(safeUrl);
+    copyBtn.textContent = 'SAFE LINK COPIED! ✔';
+    setTimeout(() => { copyBtn.textContent = 'COPY SAFE LINK 🔒'; }, 2000);
   });
 
   showModal('INVITE FRIENDS', 'sticky-tape-green', [
-    h('div', { class: 'qr-panel flex flex-col items-center gap-4' },
+    h('div', { class: 'qr-panel flex flex-col items-center gap-3 text-center' },
       canvas,
-      h('input', { type: 'text', readonly: true, value: url.toString(), class: 'share-url-input w-full p-2 border border-black font-mono text-xs' }),
-      copyBtn
+      h('div', { class: 'text-xs font-mono text-muted font-bold' }, '📷 QR Code: Quick Join (In-person scanning)'),
+      h('div', { class: 'w-full border-t-2 border-black my-1' }),
+      h('div', { class: 'text-xs text-muted text-left w-full font-mono font-bold' }, '🔒 Safe Share Link:'),
+      h('input', { type: 'text', readonly: true, value: safeUrl, class: 'share-url-input w-full p-2 border border-black font-mono text-xs' }),
+      copyBtn,
+      h('p', { class: 'text-xs text-muted font-mono text-left' }, 'Recipients will be prompted for the secret passcode when opening the link.')
     )
   ]);
 }
