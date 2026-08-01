@@ -1183,9 +1183,19 @@ input:-webkit-autofill:focus {
     height: calc(100dvh - 56px - var(--safe-t));
   }
 
-  .ch-layout-grid:not(.mobile-active-peers) .ch-col-peers,
   .ch-col-info {
     display: none;
+  }
+  
+  .ch-col-peers {
+    display: none;
+    order: 2;
+    flex: 1 1 0%;
+    min-height: 0;
+  }
+
+  .ch-layout-grid.mobile-active-peers .ch-col-peers {
+    display: flex;
   }
 
   .ch-col-center {
@@ -1194,12 +1204,6 @@ input:-webkit-autofill:focus {
     flex-direction: column;
     order: 1;
     min-height: 0; /* allows shrinking */
-  }
-  
-  .ch-col-peers {
-    order: 2;
-    flex: 1;
-    height: auto;
   }
   
   .ch-layout-grid.mobile-active-peers .ch-col-center .chat-section-container,

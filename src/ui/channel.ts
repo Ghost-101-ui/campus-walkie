@@ -34,13 +34,7 @@ export function renderChannelScreen(
   container: HTMLElement,
   callbacks: ChannelCallbacks
 ): void {
-  const existingChatWrapper = container.querySelector('.chat-section-container') as HTMLElement | null;
-  const existingPttHero = container.querySelector('.ptt-hero-section') as HTMLElement | null;
-
-  if (existingChatWrapper) existingChatWrapper.remove();
-  if (existingPttHero) existingPttHero.remove();
-
-  clear(container);
+  let screen = container.querySelector('.channel-screen') as HTMLElement | null;
 
   /* --------------------------------------------------------------- Header */
   const linkLabel = state.link === 'reconnecting'
@@ -123,12 +117,12 @@ export function renderChannelScreen(
   );
 
   /* ------------------------------------------------------- Banners (if any) */
-  const banners: HTMLElement[] = [];
+  const bannersList: HTMLElement[] = [];
 
   if (state.needsSoundTap) {
     const tapBtn = h('button', { class: 'btn btn-primary text-xs' }, 'Enable Sound 🔊');
     on(tapBtn, 'click', () => retryPlayback());
-    banners.push(h('div', { class: 'sound-tap-banner' },
+    bannersList.push(h('div', { class: 'sound-tap-banner' },
       h('span', {}, 'Audio playback requires one user tap in this browser.'),
       tapBtn
     ));
@@ -137,11 +131,13 @@ export function renderChannelScreen(
   if (state.updateReady) {
     const updateBtn = h('button', { class: 'btn btn-warn text-xs' }, 'Reload App 🔄');
     on(updateBtn, 'click', () => window.location.reload());
-    banners.push(h('div', { class: 'update-banner' },
+    bannersList.push(h('div', { class: 'update-banner' },
       h('span', {}, 'A new version of Campus Walkie is available.'),
       updateBtn
     ));
   }
+
+  const bannersWrapper = h('div', { class: 'ch-banners-wrapper' }, ...bannersList);
 
   /* -------------------------------------------------- Mobile Tabs Switcher */
   const pttTab = h('button', {
@@ -186,32 +182,6 @@ export function renderChannelScreen(
 
   const mobileTabs = h('div', { class: 'ch-mobile-tabs' }, pttTab, chatTab, peersTab);
 
-  /* ------------------------------------------------------- Center Column (Chat & PTT) */
-  const chatAreaWrapper = existingChatWrapper || h('div', { class: 'chat-section-container' });
-  renderChatArea(chatAreaWrapper, state.messages, {
-    onSendText: callbacks.onSendText,
-    onSendFile: callbacks.onSendFile,
-  });
-
-  const pttHeroSection = existingPttHero || renderPttHeroSection();
-  if (existingPttHero) {
-    const pulseRing = existingPttHero.querySelector('.pulse-ring');
-    const heroBtn = existingPttHero.querySelector('.ptt-hero-btn');
-    if (state.transmitting) {
-       pulseRing?.classList.add('active');
-       heroBtn?.classList.add('transmitting');
-    } else {
-       pulseRing?.classList.remove('active');
-       heroBtn?.classList.remove('transmitting');
-    }
-  }
-
-  const centerColumn = h('div', { class: `ch-col-center` },
-    mobileTabs,
-    chatAreaWrapper,
-    pttHeroSection
-  );
-
   /* ------------------------------------------------------- Right Column (Info Panel) */
   const shortPeerId = state.peerId ? (state.peerId.slice(0, 4) + '-' + state.peerId.slice(-4)).toUpperCase() : 'LOCAL-HOST';
 
@@ -253,16 +223,77 @@ export function renderChannelScreen(
     )
   );
 
-  /* ------------------------------------------------ Desktop 3-Column Grid Layout */
+  /* ------------------------------------------------ If screen already exists, update in-place! */
+  if (screen) {
+    const oldHeader = screen.querySelector('.ch-header');
+    if (oldHeader) oldHeader.replaceWith(header);
+
+    const oldBanners = screen.querySelector('.ch-banners-wrapper');
+    if (oldBanners) oldBanners.replaceWith(bannersWrapper);
+
+    const gridLayout = screen.querySelector('.ch-layout-grid');
+    if (gridLayout) {
+      gridLayout.className = `ch-layout-grid mobile-active-${activeTab}`;
+      
+      const oldLeft = gridLayout.querySelector('.ch-col-peers');
+      if (oldLeft) oldLeft.replaceWith(leftPeersColumn);
+
+      const oldRight = gridLayout.querySelector('.ch-col-info');
+      if (oldRight) oldRight.replaceWith(rightInfoColumn);
+
+      const oldTabs = gridLayout.querySelector('.ch-mobile-tabs');
+      if (oldTabs) oldTabs.replaceWith(mobileTabs);
+
+      const chatAreaWrapper = gridLayout.querySelector('.chat-section-container') as HTMLElement | null;
+      if (chatAreaWrapper) {
+        renderChatArea(chatAreaWrapper, state.messages, {
+          onSendText: callbacks.onSendText,
+          onSendFile: callbacks.onSendFile,
+        });
+      }
+
+      const pttHeroSection = gridLayout.querySelector('.ptt-hero-section');
+      if (pttHeroSection) {
+        const pulseRing = pttHeroSection.querySelector('.pulse-ring');
+        const heroBtn = pttHeroSection.querySelector('.ptt-hero-btn');
+        if (state.transmitting) {
+          pulseRing?.classList.add('active');
+          heroBtn?.classList.add('transmitting');
+        } else {
+          pulseRing?.classList.remove('active');
+          heroBtn?.classList.remove('transmitting');
+        }
+      }
+    }
+    return;
+  }
+
+  /* ------------------------------------------------ Initial First Render */
+  clear(container);
+
+  const chatAreaWrapper = h('div', { class: 'chat-section-container' });
+  renderChatArea(chatAreaWrapper, state.messages, {
+    onSendText: callbacks.onSendText,
+    onSendFile: callbacks.onSendFile,
+  });
+
+  const pttHeroSection = renderPttHeroSection();
+
+  const centerColumn = h('div', { class: `ch-col-center` },
+    mobileTabs,
+    chatAreaWrapper,
+    pttHeroSection
+  );
+
   const gridLayout = h('div', { class: `ch-layout-grid mobile-active-${activeTab}` },
     leftPeersColumn,
     centerColumn,
     rightInfoColumn
   );
 
-  const screen = h('div', { class: 'channel-screen' },
+  screen = h('div', { class: 'channel-screen' },
     header,
-    ...banners,
+    bannersWrapper,
     gridLayout
   );
 
