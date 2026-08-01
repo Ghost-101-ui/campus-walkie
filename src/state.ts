@@ -11,6 +11,8 @@
 
 import type { DebugEntry, LinkState, Message, Peer } from './types';
 
+export type VoiceFilter = 'none' | 'anime' | 'radio' | 'robot' | 'megaphone' | 'demon';
+
 export interface AppState {
   screen: 'join' | 'channel';
   link: LinkState;
@@ -41,6 +43,10 @@ export interface AppState {
   /** Reconnection countdown timer in seconds. */
   reconnectSeconds: number;
   debug: DebugEntry[];
+  /** Currently active voice filter preset. */
+  voiceFilter: VoiceFilter;
+  /** Output volume percentage for incoming peers (0–200). */
+  outputVolume: number;
 }
 
 const DEBUG_RING = 200;
@@ -64,6 +70,8 @@ export const state: AppState = {
   updateReady: false,
   reconnectSeconds: 0,
   debug: [],
+  voiceFilter: 'none',
+  outputVolume: 100,
 };
 
 type Listener = () => void;

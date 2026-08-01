@@ -2,12 +2,19 @@
  * Push-To-Talk (PTT) microphone management and VU meter visualization.
  * Handles microphone permissions, track enabling/disabling, roger tones,
  * state notifications, and WebAudio canvas volume meter rendering.
+ *
+ * Voice FX: After acquiring the mic stream, routes audio through the
+ * Voice FX Engine (voicefx.ts) so peers receive the processed signal.
  */
 
 import { audioContext, resumeAudio, toneEnd, toneStart, vibrate } from './tones';
+import { applyVoiceFx, setVoiceFilter, getProcessedStream } from './voicefx';
 import { debugLog, notify, state } from '../state';
 
+/** The RAW mic track — toggled enabled/disabled by PTT. */
 export let micTrack: MediaStreamTrack | null = null;
+/** The PROCESSED track — what actually gets sent to WebRTC peers. */
+export let processedTrack: MediaStreamTrack | null = null;
 let micStream: MediaStream | null = null;
 
 let analyser: AnalyserNode | null = null;
@@ -16,13 +23,14 @@ let animFrameId: number | null = null;
 
 /**
  * Request microphone access and retrieve the local audio track.
- * Updates state.micState and returns the track or null on failure.
+ * Also builds the Voice FX chain so the processed track is available.
+ * Updates state.micState and returns the processed track or null on failure.
  */
 export async function openMic(): Promise<MediaStreamTrack | null> {
   if (micTrack && micTrack.readyState === 'live') {
     state.micState = 'open';
     notify();
-    return micTrack;
+    return processedTrack ?? micTrack;
   }
 
   if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
@@ -46,7 +54,19 @@ export async function openMic(): Promise<MediaStreamTrack | null> {
       // Keep disabled by default until PTT button is held
       micTrack.enabled = state.transmitting;
       state.micState = 'open';
-      setupAnalyser(micStream);
+
+      // Build Voice FX chain — returns processed track for WebRTC
+      processedTrack = applyVoiceFx(micStream);
+      if (processedTrack) {
+        processedTrack.enabled = state.transmitting;
+      }
+
+      // Apply current filter preset
+      setVoiceFilter(state.voiceFilter);
+
+      // Analyser taps the processed stream so VU meter shows what peers hear
+      const processed = getProcessedStream();
+      setupAnalyser(processed ?? micStream);
     } else {
       state.micState = 'unavailable';
     }
@@ -68,7 +88,7 @@ export async function openMic(): Promise<MediaStreamTrack | null> {
   }
 
   notify();
-  return micTrack;
+  return processedTrack ?? micTrack;
 }
 
 /**
@@ -90,8 +110,12 @@ export async function setTransmitting(tx: boolean): Promise<void> {
 
   state.transmitting = tx;
 
+  // Enable/disable BOTH the raw mic track and the processed track
   if (micTrack) {
     micTrack.enabled = tx;
+  }
+  if (processedTrack) {
+    processedTrack.enabled = tx;
   }
 
   if (tx) {

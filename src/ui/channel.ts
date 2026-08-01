@@ -9,6 +9,7 @@
 
 import { $, clear, h, icon, on } from './dom';
 import { attachMeter, setTransmitting } from '../audio/ptt';
+import { setVoiceFilter, setOutputVolume } from '../audio/voicefx';
 import { retryPlayback } from '../audio/playback';
 import { micIconSvg } from './doodles';
 import { drawQr } from './qr';
@@ -16,6 +17,7 @@ import { state } from '../state';
 import { renderChatArea } from './chat';
 import { createDoodleArea } from '../components/DoodleArea';
 import type { Peer } from '../types';
+import type { VoiceFilter } from '../state';
 
 export interface ChannelCallbacks {
   onLeave(): void;
@@ -467,7 +469,96 @@ function renderPttHeroSection(): HTMLElement {
     canvas,
     pttHeroBtn,
     subHint,
+    renderVoiceFilterBar(),
+    renderVolumeBar(),
     createDoodleArea('ptt-bottom')
+  );
+}
+
+/* ------------------------------------------------------------ Voice Filter Bar */
+
+type FilterDef = { id: VoiceFilter; emoji: string; label: string; color: string };
+
+const FILTER_DEFS: FilterDef[] = [
+  { id: 'none',      emoji: '🎙️', label: 'CLEAN',  color: '#121212' },
+  { id: 'anime',     emoji: '🌸', label: 'ANIME',  color: '#E91E8C' },
+  { id: 'radio',     emoji: '📻', label: 'RADIO',  color: '#2962FF' },
+  { id: 'robot',     emoji: '🤖', label: 'ROBOT',  color: '#00BCD4' },
+  { id: 'megaphone', emoji: '📢', label: 'MEGA',   color: '#FF6D00' },
+  { id: 'demon',     emoji: '👿', label: 'DEMON',  color: '#6A1B9A' },
+];
+
+function renderVoiceFilterBar(): HTMLElement {
+  const buttons = FILTER_DEFS.map((def) => {
+    const isActive = state.voiceFilter === def.id;
+    const btn = h('button', {
+      class: `vfx-filter-btn ${isActive ? 'active' : ''}`,
+      title: def.label,
+      id: `vfx-btn-${def.id}`,
+      style: isActive ? `background:${def.color};border-color:${def.color};color:#fff;` : `border-color:${def.color};color:${def.color};`,
+    },
+      h('span', { class: 'vfx-emoji' }, def.emoji),
+      h('span', { class: 'vfx-label' }, def.label)
+    );
+
+    on(btn, 'click', () => {
+      state.voiceFilter = def.id;
+      setVoiceFilter(def.id);
+      // Update button styles in-place without full re-render
+      const row = btn.closest('.vfx-filter-row');
+      if (row) {
+        row.querySelectorAll('.vfx-filter-btn').forEach((b, i) => {
+          const d = FILTER_DEFS[i]!;
+          const active = d.id === def.id;
+          b.classList.toggle('active', active);
+          (b as HTMLElement).style.cssText = active
+            ? `background:${d.color};border-color:${d.color};color:#fff;`
+            : `border-color:${d.color};color:${d.color};`;
+        });
+      }
+    });
+
+    return btn;
+  });
+
+  return h('div', { class: 'vfx-filter-row' },
+    h('span', { class: 'vfx-row-label' }, 'VOICE FX'),
+    h('div', { class: 'vfx-btn-group' }, ...buttons)
+  );
+}
+
+/* ------------------------------------------------------------ Volume Bar */
+
+function renderVolumeBar(): HTMLElement {
+  const vol = state.outputVolume;
+
+  const label = h('span', { class: 'vfx-vol-pct' }, `${vol}%`);
+
+  const slider = h('input', {
+    type: 'range',
+    class: 'vfx-volume-slider',
+    id: 'vfx-volume-slider',
+    min: '0',
+    max: '200',
+    step: '5',
+    value: String(vol),
+  }) as HTMLInputElement;
+
+  on(slider, 'input', () => {
+    const v = Number(slider.value);
+    state.outputVolume = v;
+    setOutputVolume(v);
+    label.textContent = `${v}%`;
+    // Color-code: green ≤100%, yellow ≤150%, red >150%
+    slider.style.setProperty('--thumb-color',
+      v <= 100 ? '#22C55E' : v <= 150 ? '#F4C430' : '#E53935'
+    );
+  });
+
+  return h('div', { class: 'vfx-volume-row' },
+    h('span', { class: 'vfx-row-label' }, '🔊 VOL'),
+    slider,
+    label
   );
 }
 

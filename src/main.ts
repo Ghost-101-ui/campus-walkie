@@ -8,7 +8,7 @@
 import './index.css';
 import { deriveChannelKeysInWorker } from './crypto/kdf';
 import { createIdentity, type Identity } from './crypto/identity';
-import { openMic } from './audio/ptt';
+import { openMic, processedTrack } from './audio/ptt';
 import { unlockPlayback, stopAllPlayback } from './audio/playback';
 import { Mesh } from './net/mesh';
 import { SignalingClient } from './net/signaling';
@@ -121,7 +121,9 @@ async function handleJoin(opts: JoinOptions): Promise<void> {
       }
     );
 
-    if (track) currentMesh.setLocalTrack(track);
+    // Prefer the processed (Voice FX) track; fall back to raw mic track
+    const trackToSend = processedTrack ?? track;
+    if (trackToSend) currentMesh.setLocalTrack(trackToSend);
 
     // 6. Connect to signaling server
     currentSignaling.connect();
