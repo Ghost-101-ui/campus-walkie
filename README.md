@@ -2,11 +2,14 @@
 
 > **Zero-Trust, End-to-End Encrypted, Peer-to-Peer Voice & Text Walkie-Talkie for the Web.**
 
+[![Live Demo](https://img.shields.io/badge/🌐_LIVE_DEMO-Campus_Walkie-2E7D32?style=for-the-badge&logo=githubpages&logoColor=white)](https://ghost-101-ui.github.io/campus-walkie/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![WebRTC](https://img.shields.io/badge/WebRTC-333333?style=for-the-badge&logo=webrtc&logoColor=white)](https://webrtc.org/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+🌐 **Live Demo:** [https://ghost-101-ui.github.io/campus-walkie/](https://ghost-101-ui.github.io/campus-walkie/)
 
 **Campus Walkie** is a high-performance, browser-based Push-To-Talk (PTT) walkie-talkie and secure chat application. Designed with a Neo-Brutalist + Engineering Notebook aesthetic, it enables instant, encrypted, low-latency communication over P2P WebRTC mesh networks without central database persistence.
 
