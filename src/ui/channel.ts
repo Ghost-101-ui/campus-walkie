@@ -471,7 +471,7 @@ function renderPttHeroSection(): HTMLElement {
     subHint,
     // TODO: Voice FX temporarily hidden — uncomment to re-enable
     // renderVoiceFilterBar(),
-    // renderVolumeBar(),
+    renderVolumeBar(),
     createDoodleArea('ptt-bottom')
   );
 }
@@ -531,7 +531,6 @@ function renderVoiceFilterBar(): HTMLElement {
 
 /* ------------------------------------------------------------ Volume Bar */
 
-// @ts-ignore — temporarily hidden; remove comment when re-enabling
 function renderVolumeBar(): HTMLElement {
   const vol = state.outputVolume;
 
